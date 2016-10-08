@@ -1,4 +1,4 @@
-# "Fancier" animated interactive version of tetris. v0.1
+# "Fancier" animated interactive version of tetris. v0.2
 # D. Crandall, Sept 2016
 #
 # DON'T MODIFY THIS FILE! Or else we might not be able to grade your submission properly.

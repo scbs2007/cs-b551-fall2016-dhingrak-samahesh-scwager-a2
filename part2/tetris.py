@@ -1,4 +1,4 @@
-# Simple tetris program! v0.1
+# Simple tetris program! v0.2
 # D. Crandall, Sept 2016
 
 from AnimatedTetris import *
@@ -7,7 +7,7 @@ from kbinput import *
 import time, sys
 
 class HumanPlayer:
-    def get_moves(self, piece, board):
+    def get_moves(self, tetris):
         print "Type a sequence of moves using: \n  b for move left \n  m for move right \n  n for rotation\nThen press enter. E.g.: bbbnn\n"
         moves = raw_input()
         return moves
@@ -23,12 +23,17 @@ class HumanPlayer:
 # Replace our super simple algorithm with something better
 #
 class ComputerPlayer:
-    # Given a new piece (encoded as a list of strings) and a board (also list of strings), 
-    # this function should generate a series of commands to move the piece into the "optimal"
+    # This function should generate a series of commands to move the piece into the "optimal"
     # position. The commands are a string of letters, where b and m represent left and right, respectively,
-    # and n rotates. 
+    # and n rotates. tetris is an object that lets you inspect the board, e.g.:
+    #   - tetris.col, tetris.row have the current column and row of the upper-left corner of the 
+    #     falling piece
+    #   - tetris.get_piece() is the current piece, tetris.get_next_piece() is the next piece after that
+    #   - tetris.left(), tetris.right(), tetris.down(), and tetris.rotate() can be called to actually
+    #     issue game commands
+    #   - tetris.get_board() returns the current state of the board, as a list of strings.
     #
-    def get_moves(self, piece, board):
+    def get_moves(self, tetris):
         # super simple current algorithm: just randomly move left, right, and rotate a few times
         return random.choice("mnb") * random.randint(1, 10)
        

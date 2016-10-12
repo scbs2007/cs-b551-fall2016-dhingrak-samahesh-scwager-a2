@@ -3,6 +3,7 @@
 
 import sys
 import numpy as np
+import copy
 
 losing_seq = []
   
@@ -33,11 +34,13 @@ def game_status(board, n, k):
     
 # Add a piece to the board at the given position, and return a new board (doesn't change original)
 def add_piece(board, row, col, color):
-    return board[0:row] + [board[row][0:col] + [color,] + board[row][col+1:]] + board[row+1:]  
+    newboard = copy.deepcopy(board)
+    newboard[row,col] = color
+    return newboard
   
 def successor(board, color):
   empty = zip(*np.where(board == '.'))
-  return [ add_piece(board, row, col) for (row, col) in empty ]
+  return [ add_piece(board, row, col, color) for (row, col) in empty ]
 
 #need to implement this
 def branching_factor_function(time):
@@ -45,7 +48,7 @@ def branching_factor_function(time):
 
 def alphaBetaSearch(board, n, k, time):
   depth_limit = branching_factor_function(time)
-  val, newboard = alphaBetaMinimax(board, n, k, -sys.maxint, sys.maxint, depth_limit, 0)
+  val, newboard = alphaBetaMinimax(board, n, k, -sys.maxsize, sys.maxsize, depth_limit, 0)
   return newboard
 
 def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth):

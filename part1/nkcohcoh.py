@@ -22,7 +22,10 @@ def sequences(n, k):
    for d in s:
     positions_groups.append(d)
   return np.array(positions_groups)
-  
+
+def game_heuristic(board, n, k):
+  return 0
+
 # Check whether game has ended and whether there is a tie, a win, or a lose
 def game_status(board, n, k):
   for seq in losing_seq:
@@ -30,7 +33,7 @@ def game_status(board, n, k):
     if all(v == 'b' for v in vals): return True, 1
     if all(v == 'w' for v in vals): return True, -1
   if all('.' not in row for row in board): return True, 0
-  return False, 0
+  return False, game_heuristic(board, n, k)
     
 # Add a piece to the board at the given position, and return a new board (doesn't change original)
 def add_piece(board, row, col, color):
@@ -58,26 +61,30 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth):
   if depth >= depth_limit: return status, board
   #find whose turn it is
   color = 'b' if len(board[board == 'w']) > len(board[board == 'b']) else 'w'
-  #get successors
+  # get successors
   successors = successor(board, color)
+  # keep track of best move
+  best_move = board
   #if MAX's turn
   if color == 'w':
     for s in successors:
       result, newboard = alphaBetaMinimax(s, n, k, alpha, beta, depth_limit, depth+1)
       if result > alpha:
         alpha = result
+        best_move = s
       if alpha >= beta:
-        return alpha, s
-    return alpha, s
+        break
+    return alpha, best_move
   #if MIN's turn
   if color == 'b':
     for s in successors:
       result, newboard = alphaBetaMinimax(s, n, k, alpha, beta, depth_limit, depth+1)
       if result < beta:
         beta = result
+        best_move = s
       if beta <= alpha:
-        return beta, s
-    return beta, s
+        break
+    return beta, best_move
 
 if "__main__" == __name__:
   n, k, board, time = int(sys.argv[1]), int(sys.argv[2]), str(sys.argv[3]),  int(sys.argv[4])

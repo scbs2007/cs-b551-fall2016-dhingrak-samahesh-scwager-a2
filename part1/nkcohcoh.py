@@ -1,6 +1,10 @@
 #https://www.cs.swarthmore.edu/~meeden/cs63/f05/minimax.html (pseudocode from here)
 #http://codereview.stackexchange.com/a/24775 (ideas for victory check)
 
+#things to try for alpha-beta:
+#transposition table
+#use of IDS to order branch exploration
+
 import sys
 import numpy as np
 import copy
@@ -24,6 +28,7 @@ def sequences(n, k):
   return np.array(positions_groups)
 
 def game_heuristic(board, n, k):
+  
   return 0
 
 # Check whether game has ended and whether there is a tie, a win, or a lose

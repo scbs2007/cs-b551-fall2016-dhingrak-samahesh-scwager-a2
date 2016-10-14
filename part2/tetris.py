@@ -50,14 +50,14 @@ class ComputerPlayer:
     #   - tetris.get_board() returns the current state of the board, as a list of strings.
     #
     def control_game(self, tetris):
-        # O, J, I, T, Z
+        # O, J, I, T, Z - Key is found by " ".join(piece_orientation)
         allPossiblePieces = \
         {'xx xx': [['xx','xx']], \
         \
-        ' x  x xx': [[' x', ' x', 'xx'], ['x ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
-        'x   xxx': [[' x', ' x', 'xx'], ['x ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
-        'xx x  x ': [[' x', ' x', 'xx'], ['x ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
-        'xxx   x': [[' x', ' x', 'xx'], ['x ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        ' x  x xx': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        'x   xxx': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        'xx x  x ': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        'xxx   x': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
         \
         'x x x x': [['x', 'x', 'x', 'x'], ['xxxx']], \
         'xxxx': [['x', 'x', 'x', 'x'], ['xxxx']], \
@@ -74,53 +74,78 @@ class ComputerPlayer:
             time.sleep(0.1)
             
             board = tetris.get_board()
-            #column_heights = [ min([ r for r in range(len(board)-1, 0, -1) if board[r][c] == "x"  ] + [100,] ) for c in range(0, len(board[0]) ) ]
-            #index = column_heights.index(max(column_heights))
-            print "Piece::: \n"
-            print tetris.get_piece()
-            print "Next Piece::: \n"
-            print tetris.get_next_piece()
+            
+            #print "Piece::: \n"
+            #print tetris.get_piece()
+            #print "Next Piece::: \n"
+            #print tetris.get_next_piece()
             allRotations = allPossiblePieces[" ".join(tetris.get_piece()[0])]
             pool = ThreadPool(len(allRotations))
             #func = partial(self.calculateScore, board)
-            results = pool.map(self.findBestPositionForPiece, zip(allRotations, [board]*len(allRotations)))
-            print results
-            sys.exit(0)
+            
+            results = pool.map(self.findBestPositionForPiece, zip(allRotations, [board] * len(allRotations)))
+            maxHeuristicIndex = results.index(max(results))
+            #print "Result: "
+            #print results
+            #print maxHeuristicIndex
 
-            if(index < tetris.col):
+            if(maxHeuristicIndex < tetris.col):
                 tetris.left()
-            elif(index > tetris.col):
+            elif(maxHeuristicIndex > tetris.col):
                 tetris.right()
             else:
                 tetris.down()
 
     def findBestPositionForPiece(self, argument):
-        #print argument
-        piece = argument[0]
-        board = argument[1]
+        piece, board = argument
+        #board = board[0:19] + ['xxxxxxxxx ']
         columnHeights = map(lambda x: 20 - x, self.findColumnHeights(board))
-        maxColumn = 11 - max(map(len, piece))
-        possibleColumnIndexes = []
-        #possibleColumnIndexes = [index for index in range(0, maxColumn)]
-        for row in range(0, maxColumn):
-            columnIndexToPlaceAt = columnHeights[row] - 1
-            if(not TetrisGame.check_collision((board, 0), piece, row, columnIndexToPlaceAt)):
-                possibleColumnIndexes.append(columnIndexToPlaceAt)
-                print columnIndexToPlaceAt,
-        if not possibleColumnIndexes:
+        possibleIndexes = []
+        for col in range(0, 10):
+            index = columnHeights[col]
+            rowIndexToPlaceAt = index - len(piece)
+            #print piece
+            #print (rowIndexToPlaceAt, col)
+            val = TetrisGame.check_collision((board, 0), piece, rowIndexToPlaceAt, col)
+            if(val == False):
+                possibleIndexes.append((rowIndexToPlaceAt, col))
+        #print "HERE--"
+        #print possibleIndexes
+        numberOfThreads = len(possibleIndexes)
+        if numberOfThreads == 0:
             return None
-        pool = ThreadPool(len(possibleColumnIndexes))
-        results = pool.map(self.calculateHeuristicValue, zip([argument[0]] * maxColumn, [argument[1]] * maxColumn, possibleColumnIndexes))
-        #print "Max Width: ", maxWidth
-        
-        return argument[0][0] 
+        pool = ThreadPool(numberOfThreads)
+        results = pool.map(self.calculateHeuristicValue, zip([piece] * numberOfThreads, [board] * numberOfThreads, possibleIndexes))
+        #maxHeuristicIndex = results.index(max(results))
+        #print "Results: "
+        #print(results)
+        return max(results)
 
     def calculateHeuristicValue(self, argument):
+        # https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+        
+        a = -0.510066
+        b = 0.760666
+        c = -0.35663
+        d = -0.184483
+
         #print "ARGUMENT: \n" 
-        #print argument[0], argument[2]
-        piece, board, index = argument
-        board = copy.deepcopy(board)    
-        return
+        #print argument[0]
+        #print argument[2]
+        #print "\n"
+        #sys.exit(0)
+        piece, board, rowCol = argument
+        
+        # Place piece on board for calculating heuristic score
+        board = TetrisGame.place_piece((board, 0), piece, rowCol[0], rowCol[1])[0]
+        #print "ADDED PIECE: "
+        #print "\n".join(board)
+        # Calculate heuristic
+        return a * self.calculateAggregateColumnHeights(board) + \
+                    b * self.findNumberOfCompleteLines(board) + \
+                    c * self.findNumberOfHoles(board) + \
+                    d * self.calculateBumpiness(board)
+        
 
     def findColumnHeights(self, board):
         heights = []
@@ -143,7 +168,7 @@ class ComputerPlayer:
         return sum([1 for row in board if all(cellValue == "x" for cellValue in row)])
     
     def findNumberOfHoles(self, board):
-        columnHeights = map(lambda x: 20 - x, findColumnHeights(board))
+        columnHeights = map(lambda x: 20 - x, self.findColumnHeights(board))
         holes = 0
         for i in range(0, len(board[0])):
             if columnHeights[i] != 20:
@@ -154,8 +179,8 @@ class ComputerPlayer:
         #return sum([sum([1 for row in range(len(board) - 1, map(lambda x: 19 if x == 0 else 20 - x, findColumnHeights(board))[col], -1) if board[row][col] == " "]) \
         #        for col in range(0, len(board[0]))])
 
-    def bumpiness(self, board):
-        columnHeights = findColumnHeights(board)
+    def calculateBumpiness(self, board):
+        columnHeights = self.findColumnHeights(board)
         return sum([abs(columnHeights[index] - columnHeights[index + 1])  for index in range(len(columnHeights) - 1)])
         
     def professors_control_game(self, tetris):

@@ -34,16 +34,16 @@ def game_heuristic(board, n, k, seq):
         for s in empty:
             a1 = [ 1 for y in seq if ((y[ 0 ][ 0 ] == s or y[ 0 ][ 1 ] == s or y[ 0 ][ 2 ] == s) and y[ 0 ][ 0 ] != blck_pos and y[ 0 ][1 ] != blck_pos and y[ 0 ][ 2 ] != blck_pos) ]
             state_len = len(a1)
-            print("state , state_len:", s, state_len)
+            print("white loop")
             heappush(h, (state_len, s))
-        return heappop(h)
+            return heappop(h)
     else:
         for s in empty:
             a1 = [ 1 for y in seq if ((y[ 0 ][ 0 ] == s or y[ 0 ][ 1 ] == s or y[ 0 ][ 2 ] == s) and y[ 0 ][ 0 ] != white_pos and y[ 0 ][1 ] != white_pos and y[ 0 ][ 2 ] != white_pos) ]
             state_len = len(a1)
-            print("state , state_len:", s, state_len)
+            print("black loop")
             heappush(h, (state_len, s))
-        return heappop(h)
+            return heappop(h)
 
 
 

@@ -1,6 +1,8 @@
 import sys
 import numpy as np
 import copy
+import heapq
+from heapq import *
 
 losing_seq = [ ]
 
@@ -25,25 +27,23 @@ def sequences(n, k):
 
 
 def game_heuristic(board, n, k, seq):
-    heuristic_value = 0
+    h = []
     empty_spot = zip(*np.where(board == '.'))
     white_pos = zip(*np.where(board == 'w'))
     blck_pos =  zip(*np.where(board == 'b'))
 
     if len(white_pos) >= len(blck_pos):
-        for s in empty:
+        for s in empty_spot:
             a1 = [ 1 for y in seq if ((y[ 0 ][ 0 ] == s or y[ 0 ][ 1 ] == s or y[ 0 ][ 2 ] == s) and y[ 0 ][ 0 ] != blck_pos and y[ 0 ][1 ] != blck_pos and y[ 0 ][ 2 ] != blck_pos) ]
             state_len = len(a1)
-            print("white loop")
             heappush(h, (state_len, s))
-            return heappop(h)
+            # need to mention return statement as return h but its throwing error , if you can place it with proper indentation
     else:
-        for s in empty:
+        for s in empty_spot:
             a1 = [ 1 for y in seq if ((y[ 0 ][ 0 ] == s or y[ 0 ][ 1 ] == s or y[ 0 ][ 2 ] == s) and y[ 0 ][ 0 ] != white_pos and y[ 0 ][1 ] != white_pos and y[ 0 ][ 2 ] != white_pos) ]
             state_len = len(a1)
-            print("black loop")
             heappush(h, (state_len, s))
-            return heappop(h)
+
 
 
 

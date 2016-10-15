@@ -6,12 +6,24 @@
 #transposition table
 #use of IDS to order branch exploration
 
+'''
+timeout function found @ http://stackoverflow.com/questions/492519/timeout-on-a-function-call
+'''
+
 import sys
 import numpy as np
 import copy
+import time
+import signal
 
 losing_seq = []
-  
+
+class TimeoutError(Exception):
+    pass
+    
+def handler(signum, frame):
+    raise TimeoutError()
+
 def printable_board(board):
   return "\n".join([ " ".join(row) for row in board])
   
@@ -77,15 +89,24 @@ def alphaBetaSearch(board, n, k, time):
   depth_limit = branching_factor_function(time)
   val, newboard = alphaBetaMinimax(board, n, k, -sys.maxsize, sys.maxsize, depth_limit, 0, order)
   return newboard
-  
-def alphaBetaSearchIDS(board, n, k, time):
-  max_depth = branching_factor_function(time)
+    
+def alphaBetaSearchIDS(board, n, k, timeout_duration):
   # hash table to store move order
   order = {}
   depth = 1
-  while depth < depth_limit:
-    alphaBetaMinimax(board, n, k, -sys.maxsize, sys.maxsize, depth, 0, order)
-    depth += 1
+  result = []
+  try:
+      while True:
+        print (depth)
+        result = alphaBetaMinimax(board, n, k, -sys.maxsize, sys.maxsize, depth, 0, order)
+        depth += 1
+        end, _ = game_status(board, n, k)
+        if end is True: return result
+  except TimeoutError as exc:
+      return result
+  finally: 
+      signal.alarm(0)
+  return result
 
 def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
   #check for leaf nodes
@@ -97,14 +118,15 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
   # get successors
   successors = successor(board, color)
   # keep only ordered successors if this depth has already been explored:
-  if str(board) in order: successors = [ successors[i] for i in order[ str(board) ] ]
+  if str(board) in order: 
+    successors = [ successors[i] for i in order[ str(board) ] ]
+    #print ("\norder", order)
   # keep track of best move for current player
   best_move = []
   # keep track of scores for each successor
   scores = []
   #if MAX's turn
   if color == 'w':
-    print("depth", depth, "MAX:", "alpha", alpha, "beta", beta)
     for s in successors:
       result, newboard = alphaBetaMinimax(s, n, k, alpha, beta, depth_limit, depth+1, order)
       scores.append(result)
@@ -112,18 +134,18 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
         alpha = result
         best_move = s
       if alpha >= beta:
-        print("break")
-        print("depth", depth, "MAX:", "alpha", alpha, "beta", beta)
-        print("current board")
-        print(printable_board(board))
-        print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
+#         print("break")
+#         print("depth", depth, "MAX:", "alpha", alpha, "beta", beta)
+#         print("current board")
+#         print(printable_board(board))
+#         print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
         return alpha, best_move
     # store moves in decreasing value order
     if str(board) not in order: order[str(board)] = sorted(range(len(scores)), key=lambda k: scores[k], reverse = True)
-    print("depth", depth, "MAX:", "alpha", alpha, "beta", beta)
-    print("current board")
-    print(printable_board(board))
-    print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
+    # print("depth", depth, "MAX:", "alpha", alpha, "beta", beta)
+#     print("current board")
+#     print(printable_board(board))
+#     print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
     return alpha, best_move
   #if MIN's turn
   if color == 'b':
@@ -134,22 +156,26 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
         beta = result
         best_move = s
       if alpha >= beta:
-        print("break")
-        print("depth", depth, "MIN:", "alpha", alpha, "beta", beta)
-        print("current board")
-        print(printable_board(board))
-        print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
+#         print("break")
+#         print("depth", depth, "MIN:", "alpha", alpha, "beta", beta)
+#         print("current board")
+#         print(printable_board(board))
+#         print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
         return beta, best_move
     # store moves in increasing value order
     if str(board) not in order: order[str(board)] = order[str(board)] = sorted(range(len(scores)), key=lambda k: scores[k])
-    print("depth", depth, "MIN:", "alpha", alpha, "beta", beta)
-    print("current board")
-    print(printable_board(board))
-    print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
+#     print("depth", depth, "MIN:", "alpha", alpha, "beta", beta)
+#     print("current board")
+#     print(printable_board(board))
+#     print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
     return beta, best_move
     
 if "__main__" == __name__:
   n, k, board, time = int(sys.argv[1]), int(sys.argv[2]), str(sys.argv[3]),  int(sys.argv[4])
+  # set the timeout handler
+  signal.signal(signal.SIGALRM, handler) 
+  signal.alarm(time)
+  
   losing_seq = sequences(n,k)
   board = np.reshape(list(board), (n, n))
   print ( "current board:")
@@ -159,4 +185,4 @@ if "__main__" == __name__:
   if end is True: 
     print ( "Game has ended" + result )
     quit()
-  print ( alphaBetaSearch(board, n, k, time) )  
+  print ( alphaBetaSearchIDS(board, n, k, time) )  

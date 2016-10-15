@@ -118,8 +118,8 @@ class TetrisGame:
     return self.state[0]
 
   # return current score
-  def get_score(eslf):
-    return self.score
+  def get_score(self):
+    return self.state[1]
 
   # return currently-falling piece, and its current row and column on the boar
   def get_piece(self):

@@ -1,3 +1,4 @@
+
 #https://www.cs.swarthmore.edu/~meeden/cs63/f05/minimax.html (pseudocode from here)
 #http://codereview.stackexchange.com/a/24775 (ideas for victory check)
 
@@ -27,9 +28,25 @@ def sequences(n, k):
     positions_groups.append(d)
   return np.array(positions_groups)
 
-def game_heuristic(board, n, k):
-  
-  return 0
+def game_heuristic(board, n, k, seq):
+    h = []
+    empty_spot = zip(*np.where(board == '.'))
+    white_pos = zip(*np.where(board == 'w'))
+    blck_pos =  zip(*np.where(board == 'b'))
+
+    if len(white_pos) >= len(blck_pos):
+        for s in empty_spot:
+            a1 = [ 1 for y in seq if ((y[ 0 ][ 0 ] == s or y[ 0 ][ 1 ] == s or y[ 0 ][ 2 ] == s) and y[ 0 ][ 0 ] != blck_pos and y[ 0 ][1 ] \
+!= blck_pos and y[ 0 ][ 2 ] != blck_pos) ]
+            state_len = len(a1)
+            heappush(h, (state_len, s))
+            # need to mention return statement as return h but its throwing error , if you can place it with proper indentation^M            
+    else:
+        for s in empty_spot:
+            a1 = [ 1 for y in seq if ((y[ 0 ][ 0 ] == s or y[ 0 ][ 1 ] == s or y[ 0 ][ 2 ] == s) and y[ 0 ][ 0 ] != white_pos and y[ 0 ][1 ]\
+ != white_pos and y[ 0 ][ 2 ] != white_pos) ]
+            state_len = len(a1)
+            heappush(h, (state_len, s))
 
 # Check whether game has ended and whether there is a tie, a win, or a lose
 def game_status(board, n, k):
@@ -38,8 +55,9 @@ def game_status(board, n, k):
     if all(v == 'b' for v in vals): return True, 1
     if all(v == 'w' for v in vals): return True, -1
   if all('.' not in row for row in board): return True, 0
-  return False, game_heuristic(board, n, k)
-    
+#  return False, game_heuristic(board, n, k, seq)
+  return False, 0
+
 # Add a piece to the board at the given position, and return a new board (doesn't change original)
 def add_piece(board, row, col, color):
     newboard = copy.deepcopy(board)
@@ -131,8 +149,4 @@ if "__main__" == __name__:
   if end is True: 
     print ( "Game has ended" + result )
     quit()
-  print ( alphaBetaSearch(board, n, k, time) )
-  
-  
-  
-  
+  print ( alphaBetaSearch(board, n, k, time) )  

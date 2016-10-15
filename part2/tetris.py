@@ -90,16 +90,12 @@ class ComputerPlayer:
             
             toPlaceAtColumnIndex = maxResult[1]
             maxHeuristicPieceIndex = results.index(maxResult)
-            #print "Result: "
-            #print results
-            #print"------"
-            #print maxHeuristicPieceIndex
-            #print"------"
-            #print "All Rotations: "
-            #print allRotations[maxHeuristicPieceIndex]
-            #print "piece"
-            #print piece
-            if(piece !=  allRotations[maxHeuristicPieceIndex]):
+            #print "All Heuristic Result (Index, Heuristic): ", results
+            #print "------"
+            #print "This orientation of the piece to place: ", maxHeuristicPieceIndex
+            #print "------"
+            #print "Put this piece: ", allRotations[maxHeuristicPieceIndex]
+            if(piece != allRotations[maxHeuristicPieceIndex]):
                 #print"Rotate"
                 piece = tetris.get_piece()[0]
                 tetris.rotate()
@@ -116,18 +112,25 @@ class ComputerPlayer:
 
     def findBestPositionForPiece(self, argument):
         piece, board = argument
+        lengthOfPiece = len(piece)
         #board = board[0:19] + ['xxxxxxxxx ']
-        columnHeights = map(lambda x: 20 - x, self.findColumnHeights(board))
+        maxRowIndexes = map(lambda x: 20 - x - len(piece), self.findColumnHeights(board))
+        indexToStartFrom = min(maxRowIndexes)
+        #print "MAXROWINDEXES: ", maxRowIndexes
+        #print "IndexToStartFROM", indexToStartFrom
         possibleIndexes = []
-        for col in range(0, 10):
-            index = columnHeights[col]
-            rowIndexToPlaceAt = index - len(piece)
-            #print piece
-            #print (rowIndexToPlaceAt, col)
-            val = TetrisGame.check_collision((board, 0), piece, rowIndexToPlaceAt, col)
-            if(val == False):
-                possibleIndexes.append((rowIndexToPlaceAt, col))
-        #print "HERE--"
+        for col in range(0, 11 - len(piece[0])):
+            for rowIndexToPlaceAt in range(indexToStartFrom, 20):#maxRowIndexes[col] + 1):
+                #print "RC: ", (rowIndexToPlaceAt, col)
+                #print piece
+                val = TetrisGame.check_collision((board, 0), piece, rowIndexToPlaceAt, col)
+                if(val == True):#False):
+                    #print (rowIndexToPlaceAt -1, col)
+                    possibleIndexes.append((rowIndexToPlaceAt - 1, col))
+                    break
+        if len(possibleIndexes) == 0:
+            possibleIndexes.append((19,0))
+        #print "Possible Indexes: "
         #print possibleIndexes
         numberOfThreads = len(possibleIndexes)
         if numberOfThreads == 0:
@@ -135,7 +138,7 @@ class ComputerPlayer:
         pool = ThreadPool(numberOfThreads)
         results = pool.map(self.calculateHeuristicValue, zip([piece] * numberOfThreads, [board] * numberOfThreads, possibleIndexes))
         #maxHeuristicIndex = results.index(max(results))
-        #print "Results: "
+        #print "Heuristic Values: "
         #print(results)
         pool.close()
         pool.join()
@@ -144,12 +147,16 @@ class ComputerPlayer:
 
     def calculateHeuristicValue(self, argument):
         # https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
-        
+        '''a = -3.78
+        b = 1.6
+        c = -2.31
+        d = -0.59
+        '''
         a = -0.510066
         b = 0.760666
         c = -0.35663
         d = -0.184483
-
+        
         #print "ARGUMENT: \n" 
         #print argument[0]
         #print argument[2]
@@ -161,12 +168,16 @@ class ComputerPlayer:
         board = TetrisGame.place_piece((board, 0), piece, rowCol[0], rowCol[1])[0]
         #print "ADDED PIECE: "
         #print "\n".join(board)
+        #print "Heuristic Values: "
+        #print "Height: ", self.calculateAggregateColumnHeights(board)
+        #print "Complete Lines: ", self.findNumberOfCompleteLines(board)
+        #print "Number of Holes: ", self.findNumberOfHoles(board)
+        #print "Bumpiness: ", self.calculateBumpiness(board)
         # Calculate heuristic
         return a * self.calculateAggregateColumnHeights(board) + \
                     b * self.findNumberOfCompleteLines(board) + \
                     c * self.findNumberOfHoles(board) + \
                     d * self.calculateBumpiness(board)
-        
 
     def findColumnHeights(self, board):
         heights = []

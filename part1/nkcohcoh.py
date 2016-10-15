@@ -81,40 +81,43 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
   # keep only ordered successors if this depth has already been explored:
   if str(board) in order: successors = [ successors[i] for i in order[ str(board) ] ]
   # keep track of best move for current player
-  best_move = board
+  best_move = []
   # keep track of scores for each successor
   scores = []
   #if MAX's turn
   if color == 'w':
-    print("MAX:\n")
-    print(printable_board(board)) 
-    for ind, s in enumerate(successors):
+    print("depth", depth, "MAX:", "alpha", alpha, "beta", beta)
+    for s in successors:
       result, newboard = alphaBetaMinimax(s, n, k, alpha, beta, depth_limit, depth+1, order)
       scores.append(result)
       if result > alpha:
         alpha = result
         best_move = s
       if alpha >= beta:
-        break
+        return alpha, best_move
     # store moves in decreasing value order
     if str(board) not in order: order[str(board)] = sorted(range(len(scores)), key=lambda k: scores[k], reverse = True)
-    print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores, "order", order[str(board)] )
+    print("depth", depth, "MAX:", "alpha", alpha, "beta", beta)
+    print("current board")
+    print(printable_board(board))
+    print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
     return alpha, best_move
   #if MIN's turn
   if color == 'b':
-    print("MIN:\n")
-    print(printable_board(board)) 
-    for ind, s in enumerate(successors):
+    for s in successors:
       result, newboard = alphaBetaMinimax(s, n, k, alpha, beta, depth_limit, depth+1, order)
       scores.append(result)
       if result < beta:
         beta = result
         best_move = s
-      if beta <= alpha:
-        break
+      if alpha >= beta:
+        return beta, best_move
     # store moves in increasing value order
     if str(board) not in order: order[str(board)] = order[str(board)] = sorted(range(len(scores)), key=lambda k: scores[k])
-    print ("successors MIN\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores, "order", order[str(board)] )
+    print("depth", depth, "MIN:", "alpha", alpha, "beta", beta)
+    print("current board")
+    print(printable_board(board))
+    print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
     return beta, best_move
     
 if "__main__" == __name__:

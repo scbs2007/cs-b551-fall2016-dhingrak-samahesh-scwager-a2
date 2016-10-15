@@ -82,10 +82,10 @@ class ComputerPlayer:
             #print "Next Piece::: \n"
             #print tetris.get_next_piece()
             allRotations = allPossiblePieces[pieceAsString]
-            pool = ThreadPool(len(allRotations))
+            #pool = ThreadPool(len(allRotations))
             #func = partial(self.calculateScore, board)
             
-            results = pool.map(self.findBestPositionForPiece, zip(allRotations, [board] * len(allRotations)))
+            results = map(self.findBestPositionForPiece, zip(allRotations, [board] * len(allRotations)))
             maxResult = max(results, key=itemgetter(0))
             
             toPlaceAtColumnIndex = maxResult[1]
@@ -107,8 +107,8 @@ class ComputerPlayer:
                 tetris.right()
             else:
                 tetris.down()
-            pool.close()
-            pool.join()
+            #pool.close()
+            #pool.join()
 
     def findBestPositionForPiece(self, argument):
         piece, board = argument
@@ -135,13 +135,13 @@ class ComputerPlayer:
         numberOfThreads = len(possibleIndexes)
         if numberOfThreads == 0:
             return None
-        pool = ThreadPool(numberOfThreads)
-        results = pool.map(self.calculateHeuristicValue, zip([piece] * numberOfThreads, [board] * numberOfThreads, possibleIndexes))
+        #pool = ThreadPool(numberOfThreads)
+        results = map(self.calculateHeuristicValue, zip([piece] * numberOfThreads, [board] * numberOfThreads, possibleIndexes))
         #maxHeuristicIndex = results.index(max(results))
         #print "Heuristic Values: "
         #print(results)
-        pool.close()
-        pool.join()
+        #pool.close()
+        #pool.join()
         maxHeuristicValue = max(results)
         return (maxHeuristicValue, results.index(maxHeuristicValue))
 

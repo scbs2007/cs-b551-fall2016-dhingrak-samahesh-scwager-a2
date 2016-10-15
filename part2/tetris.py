@@ -4,9 +4,10 @@
 from AnimatedTetris import *
 from SimpleTetris import *
 from kbinput import *
-import time, sys, copy
 from multiprocessing.dummy import Pool as ThreadPool 
+from operator import itemgetter
 #from functools import partial
+import time, sys, copy, itertools
 
 class HumanPlayer:
     def get_moves(self, tetris):
@@ -50,7 +51,7 @@ class ComputerPlayer:
     #   - tetris.get_board() returns the current state of the board, as a list of strings.
     #
     def control_game(self, tetris):
-        # O, J, I, T, Z - Key is found by " ".join(piece_orientation)
+        # O, J, I, T, Z - Key is found by " ".join(piece orientation)
         allPossiblePieces = \
         {'xx xx': [['xx','xx']], \
         \
@@ -74,27 +75,44 @@ class ComputerPlayer:
             time.sleep(0.1)
             
             board = tetris.get_board()
-            
+            piece = tetris.get_piece()[0]
+            pieceAsString = " ".join(piece)
             #print "Piece::: \n"
-            #print tetris.get_piece()
+            #print piece
             #print "Next Piece::: \n"
             #print tetris.get_next_piece()
-            allRotations = allPossiblePieces[" ".join(tetris.get_piece()[0])]
+            allRotations = allPossiblePieces[pieceAsString]
             pool = ThreadPool(len(allRotations))
             #func = partial(self.calculateScore, board)
             
             results = pool.map(self.findBestPositionForPiece, zip(allRotations, [board] * len(allRotations)))
-            maxHeuristicIndex = results.index(max(results))
-            #print "Result: "
-            #print results
-            #print maxHeuristicIndex
-
-            if(maxHeuristicIndex < tetris.col):
+            maxResult = max(results, key=itemgetter(0))
+            
+            toPlaceAtColumnIndex = maxResult[1]
+            maxHeuristicPieceIndex = results.index(maxResult)
+            print "Result: "
+            print results
+            print"------"
+            print maxHeuristicPieceIndex
+            print"------"
+            print "All Rotations: "
+            print allRotations[maxHeuristicPieceIndex]
+            print "piece"
+            print piece
+            if(piece !=  allRotations[maxHeuristicPieceIndex]):
+                #print"Rotate"
+                piece = tetris.get_piece()[0]
+                tetris.rotate()
+                
+            sys.exit(0)
+            if(toPlaceAtColumnIndex < tetris.col):
                 tetris.left()
-            elif(maxHeuristicIndex > tetris.col):
+            elif(toPlaceAtColumnIndex > tetris.col):
                 tetris.right()
             else:
                 tetris.down()
+            pool.close()
+            pool.join()
 
     def findBestPositionForPiece(self, argument):
         piece, board = argument
@@ -119,7 +137,10 @@ class ComputerPlayer:
         #maxHeuristicIndex = results.index(max(results))
         #print "Results: "
         #print(results)
-        return max(results)
+        pool.close()
+        pool.join()
+        maxHeuristicValue = max(results)
+        return (maxHeuristicValue, results.index(maxHeuristicValue))
 
     def calculateHeuristicValue(self, argument):
         # https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/

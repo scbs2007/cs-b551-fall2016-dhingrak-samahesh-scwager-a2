@@ -112,6 +112,11 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
         alpha = result
         best_move = s
       if alpha >= beta:
+        print("break")
+        print("depth", depth, "MAX:", "alpha", alpha, "beta", beta)
+        print("current board")
+        print(printable_board(board))
+        print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
         return alpha, best_move
     # store moves in decreasing value order
     if str(board) not in order: order[str(board)] = sorted(range(len(scores)), key=lambda k: scores[k], reverse = True)
@@ -129,6 +134,11 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
         beta = result
         best_move = s
       if alpha >= beta:
+        print("break")
+        print("depth", depth, "MIN:", "alpha", alpha, "beta", beta)
+        print("current board")
+        print(printable_board(board))
+        print ("successors MAX\n", "\n\n".join([printable_board(i) for i in successors]), "scores", scores)
         return beta, best_move
     # store moves in increasing value order
     if str(board) not in order: order[str(board)] = order[str(board)] = sorted(range(len(scores)), key=lambda k: scores[k])

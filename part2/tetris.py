@@ -7,7 +7,7 @@ from kbinput import *
 from multiprocessing.dummy import Pool as ThreadPool 
 from operator import itemgetter
 #from functools import partial
-import time, sys, copy, itertools
+import time, sys, copy, itertools, random
 
 class HumanPlayer:
     def get_moves(self, tetris):
@@ -70,7 +70,8 @@ class ComputerPlayer:
         \
         'xx   xx': [['xx ', ' xx'], [' x', 'xx', 'x ']], \
         ' x xx x ': [['xx ', ' xx'], [' x', 'xx', 'x ']]}
-        
+       
+        #checkNewPiece = True 
         while 1:
             time.sleep(0.1)
             
@@ -95,18 +96,28 @@ class ComputerPlayer:
             #print "This orientation of the piece to place: ", maxHeuristicPieceIndex
             #print "------"
             #print "Put this piece: ", allRotations[maxHeuristicPieceIndex]
+            #checkNewPiece = False
+            
             if(piece != allRotations[maxHeuristicPieceIndex]):
-                #print"Rotate"
+                '''
+                    Check if the piece is falling from the edge. If it has to be rotated, but because of its position it is not being able to,
+                    then bring it to the centre column, rotate and then take it back to previous column.
+                '''
+                while(tetris.col != 4):
+                    if(4 < tetris.col):
+                        tetris.left()
+                    elif(4 > tetris.col):
+                        tetris.right()
                 piece = tetris.get_piece()[0]
                 tetris.rotate()
                 
-            #sys.exit(0)
             if(toPlaceAtColumnIndex < tetris.col):
                 tetris.left()
             elif(toPlaceAtColumnIndex > tetris.col):
                 tetris.right()
             else:
                 tetris.down()
+                #checkNewPiece = True
             #pool.close()
             #pool.join()
 
@@ -133,8 +144,7 @@ class ComputerPlayer:
         #print "Possible Indexes: "
         #print possibleIndexes
         numberOfThreads = len(possibleIndexes)
-        if numberOfThreads == 0:
-            return None
+        
         #pool = ThreadPool(numberOfThreads)
         results = map(self.calculateHeuristicValue, zip([piece] * numberOfThreads, [board] * numberOfThreads, possibleIndexes))
         #maxHeuristicIndex = results.index(max(results))
@@ -143,6 +153,11 @@ class ComputerPlayer:
         #pool.close()
         #pool.join()
         maxHeuristicValue = max(results)
+
+        # If same heuristic is found choose random indexes from all possible values - to place the piece
+        #allIndexesWithMaxVal = [i for i in range(0, len(results)) if results[i] == maxHeuristicValue]
+
+        #return (maxHeuristicValue, random.choice(allIndexesWithMaxVal))
         return (maxHeuristicValue, results.index(maxHeuristicValue))
 
     def calculateHeuristicValue(self, argument):
@@ -152,11 +167,26 @@ class ComputerPlayer:
         c = -2.31
         d = -0.59
         '''
+        '''
+        a = -0.650066
+        b = 0.760666
+        c = -0.35663
+        d = -0.184483
+       
+        '''
         a = -0.510066
         b = 0.760666
         c = -0.35663
         d = -0.184483
+
         
+ 
+        '''
+        a = -5
+        b = 2
+        c = -3
+        d = -1.5
+        '''
         #print "ARGUMENT: \n" 
         #print argument[0]
         #print argument[2]

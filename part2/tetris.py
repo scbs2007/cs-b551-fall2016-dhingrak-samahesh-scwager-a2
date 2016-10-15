@@ -90,21 +90,21 @@ class ComputerPlayer:
             
             toPlaceAtColumnIndex = maxResult[1]
             maxHeuristicPieceIndex = results.index(maxResult)
-            print "Result: "
-            print results
-            print"------"
-            print maxHeuristicPieceIndex
-            print"------"
-            print "All Rotations: "
-            print allRotations[maxHeuristicPieceIndex]
-            print "piece"
-            print piece
+            #print "Result: "
+            #print results
+            #print"------"
+            #print maxHeuristicPieceIndex
+            #print"------"
+            #print "All Rotations: "
+            #print allRotations[maxHeuristicPieceIndex]
+            #print "piece"
+            #print piece
             if(piece !=  allRotations[maxHeuristicPieceIndex]):
                 #print"Rotate"
                 piece = tetris.get_piece()[0]
                 tetris.rotate()
                 
-            sys.exit(0)
+            #sys.exit(0)
             if(toPlaceAtColumnIndex < tetris.col):
                 tetris.left()
             elif(toPlaceAtColumnIndex > tetris.col):

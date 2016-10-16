@@ -7,7 +7,7 @@ from kbinput import *
 from multiprocessing.dummy import Pool as ThreadPool 
 from operator import itemgetter
 #from functools import partial
-import time, sys, copy, itertools, random
+import time, sys, itertools#, random
 
 class HumanPlayer:
     def get_moves(self, tetris):
@@ -26,6 +26,28 @@ class HumanPlayer:
 # Replace our super simple algorithm with something better
 #
 class ComputerPlayer:
+    
+    def __init__(self):
+        # O, J, I, T, Z - Key is found by " ".join(piece orientation)
+        self.allPossiblePieces = \
+        {'xx xx': [['xx','xx']], \
+        \
+        ' x  x xx': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        'x   xxx': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        'xx x  x ': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        'xxx   x': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        \
+        'x x x x': [['x', 'x', 'x', 'x'], ['xxxx']], \
+        'xxxx': [['x', 'x', 'x', 'x'], ['xxxx']], \
+        \
+        'xxx  x ': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
+        ' x xx  x': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
+        ' x  xxx': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
+        'x  xx x ': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
+        \
+        'xx   xx': [['xx ', ' xx'], [' x', 'xx', 'x ']], \
+        ' x xx x ': [['xx ', ' xx'], [' x', 'xx', 'x ']]}
+
     # This function should generate a series of commands to move the piece into the "optimal"
     # position. The commands are a string of letters, where b and m represent left and right, respectively,
     # and n rotates. tetris is an object that lets you inspect the board, e.g.:
@@ -51,25 +73,6 @@ class ComputerPlayer:
     #   - tetris.get_board() returns the current state of the board, as a list of strings.
     #
     def control_game(self, tetris):
-        # O, J, I, T, Z - Key is found by " ".join(piece orientation)
-        allPossiblePieces = \
-        {'xx xx': [['xx','xx']], \
-        \
-        ' x  x xx': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
-        'x   xxx': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
-        'xx x  x ': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
-        'xxx   x': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
-        \
-        'x x x x': [['x', 'x', 'x', 'x'], ['xxxx']], \
-        'xxxx': [['x', 'x', 'x', 'x'], ['xxxx']], \
-        \
-        'xxx  x ': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
-        ' x xx  x': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
-        ' x  xxx': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
-        'x  xx x ': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
-        \
-        'xx   xx': [['xx ', ' xx'], [' x', 'xx', 'x ']], \
-        ' x xx x ': [['xx ', ' xx'], [' x', 'xx', 'x ']]}
        
         #checkNewPiece = True 
         while 1:
@@ -83,7 +86,7 @@ class ComputerPlayer:
             #print piece
             #print "Next Piece::: \n"
             nextPiece = tetris.get_next_piece()
-            allRotations = allPossiblePieces[pieceAsString]
+            allRotations = self.allPossiblePieces[pieceAsString]
             #pool = ThreadPool(len(allRotations))
             #func = partial(self.calculateScore, board)
             totalPiecesPossible = len(allRotations)
@@ -103,8 +106,8 @@ class ComputerPlayer:
         
             if(piece != allRotations[maxHeuristicPieceIndex]):
                 '''
-                    Check if the piece is falling from the edge. If it has to be rotated, but because of its position it is not being able to,
-                    then bring it to the centre column, rotate and then take it back to previous column.
+                    Check if the piece is falling from the side of the board. If it has to be rotated, but because of its position it is not being able to,
+                    then move it till the column where it can rotate, and then take it back to previous column.
                 '''
                 pieceMaxLength = max(len(piece), len(piece[0]))
                 
@@ -183,18 +186,30 @@ class ComputerPlayer:
         # Place current piece on board
         boardWithPiece = TetrisGame.place_piece((board, 0), piece, rowCol[0], rowCol[1])[0]
         #print "Board With first piece: ", boardWithPiece
+        allRotations = self.allPossiblePieces[" ".join(nextPiece)]
+        #pool = ThreadPool(len(allRotations))
+        results = map(self.forEachRotationOfSecondPiece, zip(allRotations, itertools.repeat(boardWithPiece, len(allRotations))))
+        #pool.close()
+        #pool.join()
+        return max(results)
+
+    def forEachRotationOfSecondPiece(self, argument):
+        nextPiece, boardWithPiece = argument
+
         # Find column indexes where the next piece can be placed
         possibleIndexes = self.findColumnIndexesWherePieceCanBePlaced(nextPiece, boardWithPiece)
         #print "Possible Indexes For Next Piece: "
         #print possibleIndexes
         
         numberOfThreads = len(possibleIndexes)
-        #pool = Thread.pool(numberOfThreads)
+        #pool = ThreadPool(numberOfThreads)
         results = map(self.calculateHeuristicPlacedBothPieces, zip(itertools.repeat(nextPiece, numberOfThreads), \
                                             itertools.repeat(boardWithPiece, numberOfThreads), possibleIndexes))
         #print "Heuristics calculated after both pieces placed: "
         #print results
         #sys.exit(0)
+        #pool.close()
+        #pool.join()
         return max(results)
 
     def calculateHeuristicPlacedBothPieces(self, argument):

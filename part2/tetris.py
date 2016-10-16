@@ -75,6 +75,7 @@ class ComputerPlayer:
     def control_game(self, tetris):
        
         #checkNewPiece = True 
+        pool = ThreadPool(4)
         while 1:
             time.sleep(0.1)
             
@@ -91,7 +92,7 @@ class ComputerPlayer:
             #func = partial(self.calculateScore, board)
             totalPiecesPossible = len(allRotations)
             #print "ZIP: ", zip(allRotations, list(itertools.repeat(tetris, totalPiecesPossible)))
-            results = map(self.findBestPositionForPiece, zip(allRotations, list(itertools.repeat(tetris, totalPiecesPossible))))
+            results = pool.map(self.findBestPositionForPiece, zip(allRotations, list(itertools.repeat(tetris, totalPiecesPossible))))
             #print results
             maxResult = max(results, key=itemgetter(0))
             
@@ -129,8 +130,8 @@ class ComputerPlayer:
             else:
                 tetris.down()
                 #checkPiece = True
-            #pool.close()
-            #pool.join()
+        pool.close()
+        pool.join()
 
     def findColumnIndexesWherePieceCanBePlaced(self, piece, board):
         maxRowIndexes = map(lambda x: 20 - x - len(piece), self.findColumnHeights(board))

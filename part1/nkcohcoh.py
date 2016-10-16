@@ -19,12 +19,6 @@ import signal
 losing_seq = []
 heuristic = ""
 
-class TimeoutError(Exception):
-    pass
-    
-def handler(signum, frame):
-    raise TimeoutError()
-
 def printable_board(board):
   return "\n".join([ " ".join(row) for row in board])
 
@@ -56,12 +50,6 @@ def game_heuristic(board, n, k, seq):
         w += 1 + sum( 3**i for i in range(vals.count('w')) )
       if vals.count('w') == 0:
         b += 1 + sum( 3**i for i in range(vals.count('b')) )
-      ''' do something special if one player cannot lose anymore (i.e all sequences are occupied 
-       by at least one opponent stone? '''
-#     if w == 0:
-#       return -sys.maxsize//2+1
-#     if b == 0:
-#       return sys.maxsize//2+1
     if heuristic == "a": 
       return w - b
     if heuristic == "b": 
@@ -72,10 +60,11 @@ def game_heuristic(board, n, k, seq):
 
 # Check whether game has ended and whether there is a tie, a win, or a lose
 def game_status(board, n, k):
+  #print (board)
   for seq in losing_seq:
     vals = [ board[x,y] for [x,y] in seq ]
-    if all(v == 'b' for v in vals): return True, 1
-    if all(v == 'w' for v in vals): return True, -1
+    if all(v == 'b' for v in vals): return True, sys.maxsize
+    if all(v == 'w' for v in vals): return True, -sys.maxsize
   if all('.' not in row for row in board): return True, 0
   return False, game_heuristic(board, n, k, seq)
 
@@ -93,21 +82,21 @@ def alphaBetaSearchIDS(board, n, k, timeout_duration):
   # hash table to store move order
   order = {}
   depth = 1
-  result = []
-  try:
-      while depth <= n*n:
-        print (depth)
-        result = alphaBetaMinimax(board, n, k, -sys.maxsize, sys.maxsize, depth, 0, order)
-        depth += 1
-        end, _ = game_status(board, n, k)
-        if end == True: 
-          return result #does not exit!!?
-  except TimeoutError as exc:
-      print("timeout")
-      return result
-  finally: 
-      signal.alarm(0)
-  return result
+  state_count = (board == '.').sum() #how many states are explored at each depth
+  start = time.clock()
+  while depth <= state_count:
+    print (depth)
+    score, new_board = alphaBetaMinimax(board, n, k, -sys.maxsize, sys.maxsize, depth, 0, order)
+    print("new_board", new_board)
+    if game_status(new_board, n, k)[0] == True: return new_board #if game ended
+    time_used = time.clock() - start
+    time_left = timeout_duration - time_used
+    print (time_left, time_used, time_left/time_used, state_count - depth, "depth", depth)
+    if time_left / time_used < state_count - depth: #there are this many times more states to explore at depth+1
+      print ("exit", time_left, time_used, time_left/time_used, state_count - depth, "depth", depth)
+      return new_board #no time to add additional depth
+    depth += 1
+  return new_board
 
 def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
   #check whether leaf node has been reached
@@ -122,7 +111,7 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
   # keep only ordered successors if this depth has already been explored:
   if str(board) in order: 
     successors = [ successors[i] for i in order[ str(board) ] ]
-  best_move = []
+  best_move = np.array([])
   scores = []
   #if MAX's turn
   if color == 'w':     
@@ -130,6 +119,7 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
       result, newboard = alphaBetaMinimax(s, n, k, alpha, beta, depth_limit, depth+1, order)
       # keep track of scores for each successor
       scores.append(result)
+      if best_move.shape[0] == 0: best_move = s
       if result > alpha:
         alpha = result
         # keep track of best move for current player
@@ -144,6 +134,7 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
     for s in successors:
       result, newboard = alphaBetaMinimax(s, n, k, alpha, beta, depth_limit, depth+1, order)
       scores.append(result)
+      if best_move.shape[0] == 0: best_move = s
       if result < beta:
         beta = result
         best_move = s
@@ -154,10 +145,7 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order):
     return beta, best_move
     
 if "__main__" == __name__:
-  n, k, board, time, h = int(sys.argv[1]), int(sys.argv[2]), str(sys.argv[3]),  int(sys.argv[4]), str(sys.argv[5])
-  # set the timeout handler
-  signal.signal(signal.SIGALRM, handler) 
-  signal.alarm(time)
+  n, k, board, time_lim, h = int(sys.argv[1]), int(sys.argv[2]), str(sys.argv[3]),  int(sys.argv[4]), str(sys.argv[5])
   # find all possible sequence positions in board
   losing_seq = sequences(n,k)
   heuristic = h
@@ -165,11 +153,10 @@ if "__main__" == __name__:
   print ( "current board:")
   print (printable_board(board))
   end, status = game_status(board, n, k)
-  result = ": white won." if status == 1 else ": black won." if status == -1 else " with a draw."
+  result = ": white won." if status == sys.maxsize else ": black won." if status == -sys.maxsize else " with a draw."
   if end is True: 
     print ( "Game has ended" + result )
     quit()
   # let the algorithm pick a move!
   #print ( alphaBetaSearchIDS(board, n, k, time) )  
-  print (printable_board_flat( alphaBetaSearchIDS(board, n, k, time)[1] ))  
-
+  print (printable_board_flat( alphaBetaSearchIDS(board, n, k, time_lim) ))  

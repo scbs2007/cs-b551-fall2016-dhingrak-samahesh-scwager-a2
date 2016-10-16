@@ -7,7 +7,7 @@ from kbinput import *
 from multiprocessing.dummy import Pool as ThreadPool 
 from operator import itemgetter
 #from functools import partial
-import time, sys, copy, itertools
+import time, sys, itertools#, random
 
 class HumanPlayer:
     def get_moves(self, tetris):
@@ -26,6 +26,28 @@ class HumanPlayer:
 # Replace our super simple algorithm with something better
 #
 class ComputerPlayer:
+    
+    def __init__(self):
+        # O, J, I, T, Z - Key is found by " ".join(piece orientation)
+        self.allPossiblePieces = \
+        {'xx xx': [['xx','xx']], \
+        \
+        ' x  x xx': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        'x   xxx': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        'xx x  x ': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        'xxx   x': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
+        \
+        'x x x x': [['x', 'x', 'x', 'x'], ['xxxx']], \
+        'xxxx': [['x', 'x', 'x', 'x'], ['xxxx']], \
+        \
+        'xxx  x ': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
+        ' x xx  x': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
+        ' x  xxx': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
+        'x  xx x ': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
+        \
+        'xx   xx': [['xx ', ' xx'], [' x', 'xx', 'x ']], \
+        ' x xx x ': [['xx ', ' xx'], [' x', 'xx', 'x ']]}
+
     # This function should generate a series of commands to move the piece into the "optimal"
     # position. The commands are a string of letters, where b and m represent left and right, respectively,
     # and n rotates. tetris is an object that lets you inspect the board, e.g.:
@@ -51,41 +73,27 @@ class ComputerPlayer:
     #   - tetris.get_board() returns the current state of the board, as a list of strings.
     #
     def control_game(self, tetris):
-        # O, J, I, T, Z - Key is found by " ".join(piece orientation)
-        allPossiblePieces = \
-        {'xx xx': [['xx','xx']], \
-        \
-        ' x  x xx': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
-        'x   xxx': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
-        'xx x  x ': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
-        'xxx   x': [[' x', ' x', 'xx'], ['x  ', 'xxx'], ['xx', 'x ', 'x '], ['xxx', '  x']], \
-        \
-        'x x x x': [['x', 'x', 'x', 'x'], ['xxxx']], \
-        'xxxx': [['x', 'x', 'x', 'x'], ['xxxx']], \
-        \
-        'xxx  x ': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
-        ' x xx  x': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
-        ' x  xxx': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
-        'x  xx x ': [['xxx', ' x '], [' x', 'xx', ' x'], [' x ', 'xxx'], ['x ', 'xx', 'x ']], \
-        \
-        'xx   xx': [['xx ', ' xx'], [' x', 'xx', 'x ']], \
-        ' x xx x ': [['xx ', ' xx'], [' x', 'xx', 'x ']]}
-        
+       
+        #checkNewPiece = True 
+        pool = ThreadPool(4)
         while 1:
             time.sleep(0.1)
             
+            #checkNewPiece == True:
             board = tetris.get_board()
             piece = tetris.get_piece()[0]
             pieceAsString = " ".join(piece)
             #print "Piece::: \n"
             #print piece
             #print "Next Piece::: \n"
-            #print tetris.get_next_piece()
-            allRotations = allPossiblePieces[pieceAsString]
+            nextPiece = tetris.get_next_piece()
+            allRotations = self.allPossiblePieces[pieceAsString]
             #pool = ThreadPool(len(allRotations))
             #func = partial(self.calculateScore, board)
-            
-            results = map(self.findBestPositionForPiece, zip(allRotations, [board] * len(allRotations)))
+            totalPiecesPossible = len(allRotations)
+            #print "ZIP: ", zip(allRotations, list(itertools.repeat(tetris, totalPiecesPossible)))
+            results = pool.map(self.findBestPositionForPiece, zip(allRotations, list(itertools.repeat(tetris, totalPiecesPossible))))
+            #print results
             maxResult = max(results, key=itemgetter(0))
             
             toPlaceAtColumnIndex = maxResult[1]
@@ -95,89 +103,159 @@ class ComputerPlayer:
             #print "This orientation of the piece to place: ", maxHeuristicPieceIndex
             #print "------"
             #print "Put this piece: ", allRotations[maxHeuristicPieceIndex]
+            #checkNewPiece = False
+        
             if(piece != allRotations[maxHeuristicPieceIndex]):
-                #print"Rotate"
-                piece = tetris.get_piece()[0]
-                tetris.rotate()
+                '''
+                    Check if the piece is falling from the side of the board. If it has to be rotated, but because of its position it is not being able to,
+                    then move it till the column where it can rotate, and then take it back to previous column.
+                '''
+                pieceMaxLength = max(len(piece), len(piece[0]))
                 
-            #sys.exit(0)
+                if(tetris.col + pieceMaxLength - 1 > 9):
+                    for i in range(tetris.col + pieceMaxLength - 10):
+                        tetris.left()
+                elif(tetris.col - pieceMaxLength - 1 < 0):
+                    for i in range(pieceMaxLength - tetris.col - 1):
+                        tetris.right()
+                while(piece != allRotations[maxHeuristicPieceIndex]):
+                    tetris.rotate()
+                    piece = tetris.get_piece()[0]
+                    
+                
             if(toPlaceAtColumnIndex < tetris.col):
                 tetris.left()
             elif(toPlaceAtColumnIndex > tetris.col):
                 tetris.right()
             else:
                 tetris.down()
-            #pool.close()
-            #pool.join()
+                #checkPiece = True
+        pool.close()
+        pool.join()
 
-    def findBestPositionForPiece(self, argument):
-        piece, board = argument
-        lengthOfPiece = len(piece)
-        #board = board[0:19] + ['xxxxxxxxx ']
+    def findColumnIndexesWherePieceCanBePlaced(self, piece, board):
         maxRowIndexes = map(lambda x: 20 - x - len(piece), self.findColumnHeights(board))
         indexToStartFrom = min(maxRowIndexes)
-        #print "MAXROWINDEXES: ", maxRowIndexes
-        #print "IndexToStartFROM", indexToStartFrom
         possibleIndexes = []
         for col in range(0, 11 - len(piece[0])):
             for rowIndexToPlaceAt in range(indexToStartFrom, 20):#maxRowIndexes[col] + 1):
-                #print "RC: ", (rowIndexToPlaceAt, col)
-                #print piece
                 val = TetrisGame.check_collision((board, 0), piece, rowIndexToPlaceAt, col)
                 if(val == True):#False):
-                    #print (rowIndexToPlaceAt -1, col)
                     possibleIndexes.append((rowIndexToPlaceAt - 1, col))
                     break
         if len(possibleIndexes) == 0:
             possibleIndexes.append((19,0))
         #print "Possible Indexes: "
         #print possibleIndexes
+        return possibleIndexes
+
+    def findBestPositionForPiece(self, argument):
+        piece, tetris = argument
+        board = tetris.get_board()
+        nextPiece = tetris.get_next_piece()
+        lengthOfPiece = len(piece)
+        possibleIndexes = self.findColumnIndexesWherePieceCanBePlaced(piece, board)
+        #print "Possible Indexes for First piece: ", piece
+        #print possibleIndexes, "\n\n"
+
         numberOfThreads = len(possibleIndexes)
-        if numberOfThreads == 0:
-            return None
+        
         #pool = ThreadPool(numberOfThreads)
-        results = map(self.calculateHeuristicValue, zip([piece] * numberOfThreads, [board] * numberOfThreads, possibleIndexes))
+        results = map(self.calculateHeuristicValue, zip(itertools.repeat(piece, numberOfThreads), itertools.repeat(tetris, numberOfThreads), possibleIndexes))
         #maxHeuristicIndex = results.index(max(results))
-        #print "Heuristic Values: "
-        #print(results)
+        #print "After placing both pieces Heuristic Values: "
+        #print results
         #pool.close()
         #pool.join()
         maxHeuristicValue = max(results)
+
+        # If same heuristic is found choose random indexes from all possible values - to place the piece
+        #allIndexesWithMaxVal = [i for i in range(0, len(results)) if results[i] == maxHeuristicValue]
+
+        #return (maxHeuristicValue, random.choice(allIndexesWithMaxVal))
         return (maxHeuristicValue, results.index(maxHeuristicValue))
 
     def calculateHeuristicValue(self, argument):
+        piece, tetris, rowCol = argument
+        nextPiece = tetris.get_next_piece()
+        board = tetris.get_board()
+        #print "In calculateHeuristicValue: "
+        #print "Piece: \n", piece
+        #print "Next Piece: \n", nextPiece
+        #print "Board: \n", board
+        #print "RowCol: \n", rowCol 
+        # Place current piece on board
+        boardWithPiece = TetrisGame.place_piece((board, 0), piece, rowCol[0], rowCol[1])[0]
+        #print "Board With first piece: ", boardWithPiece
+        allRotations = self.allPossiblePieces[" ".join(nextPiece)]
+        #pool = ThreadPool(len(allRotations))
+        results = map(self.forEachRotationOfSecondPiece, zip(allRotations, itertools.repeat(boardWithPiece, len(allRotations))))
+        #pool.close()
+        #pool.join()
+        return max(results)
+
+    def forEachRotationOfSecondPiece(self, argument):
+        nextPiece, boardWithPiece = argument
+
+        # Find column indexes where the next piece can be placed
+        possibleIndexes = self.findColumnIndexesWherePieceCanBePlaced(nextPiece, boardWithPiece)
+        #print "Possible Indexes For Next Piece: "
+        #print possibleIndexes
+        
+        numberOfThreads = len(possibleIndexes)
+        #pool = ThreadPool(numberOfThreads)
+        results = map(self.calculateHeuristicPlacedBothPieces, zip(itertools.repeat(nextPiece, numberOfThreads), \
+                                            itertools.repeat(boardWithPiece, numberOfThreads), possibleIndexes))
+        #print "Heuristics calculated after both pieces placed: "
+        #print results
+        #sys.exit(0)
+        #pool.close()
+        #pool.join()
+        return max(results)
+
+    def calculateHeuristicPlacedBothPieces(self, argument):
+        nextPiece, boardWithCurrentPiece, rowCol = argument
+        
+        # Place next piece on board
+        boardWithBothPieces = TetrisGame.place_piece((boardWithCurrentPiece, 0), nextPiece, rowCol[0], rowCol[1])[0]
+
         # https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
         '''a = -3.78
         b = 1.6
         c = -2.31
         d = -0.59
         '''
+        '''
+        a = -0.650066
+        b = 0.760666
+        c = -0.35663
+        d = -0.184483
+        '''
         a = -0.510066
         b = 0.760666
         c = -0.35663
         d = -0.184483
-        
+        '''
+        a = -5
+        b = 2
+        c = -3
+        d = -1.5
+        '''
         #print "ARGUMENT: \n" 
-        #print argument[0]
-        #print argument[2]
-        #print "\n"
-        #sys.exit(0)
-        piece, board, rowCol = argument
         
-        # Place piece on board for calculating heuristic score
-        board = TetrisGame.place_piece((board, 0), piece, rowCol[0], rowCol[1])[0]
         #print "ADDED PIECE: "
-        #print "\n".join(board)
+        #print "\n".join(boardWithBothPieces)
         #print "Heuristic Values: "
-        #print "Height: ", self.calculateAggregateColumnHeights(board)
-        #print "Complete Lines: ", self.findNumberOfCompleteLines(board)
-        #print "Number of Holes: ", self.findNumberOfHoles(board)
-        #print "Bumpiness: ", self.calculateBumpiness(board)
+        #print "Height: ", self.calculateAggregateColumnHeights(boardWithBothPieces)
+        #print "Complete Lines: ", self.findNumberOfCompleteLines(boardWithBothPieces)
+        #print "Number of Holes: ", self.findNumberOfHoles(boardWithBothPieces)
+        #print "Bumpiness: ", self.calculateBumpiness(boardWithBothPieces)
+
         # Calculate heuristic
-        return a * self.calculateAggregateColumnHeights(board) + \
-                    b * self.findNumberOfCompleteLines(board) + \
-                    c * self.findNumberOfHoles(board) + \
-                    d * self.calculateBumpiness(board)
+        return a * self.calculateAggregateColumnHeights(boardWithBothPieces) + \
+                    b * self.findNumberOfCompleteLines(boardWithBothPieces) + \
+                    c * self.findNumberOfHoles(boardWithBothPieces) + \
+                    d * self.calculateBumpiness(boardWithBothPieces)
 
     def findColumnHeights(self, board):
         heights = []

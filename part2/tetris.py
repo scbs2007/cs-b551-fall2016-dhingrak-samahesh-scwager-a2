@@ -59,8 +59,49 @@ class ComputerPlayer:
     #   - tetris.get_board() returns the current state of the board, as a list of strings.
     #
     def get_moves(self, tetris):
-        # super simple current algorithm: just randomly move left, right, and rotate a few times
-        return random.choice("mnb") * random.randint(1, 10)
+        moves = ''
+        board = tetris.get_board()
+        piece = tetris.get_piece()[0]
+        pieceAsString = " ".join(piece)
+        nextPiece = tetris.get_next_piece()
+        allRotations = self.allPossiblePieces[pieceAsString]
+        totalPiecesPossible = len(allRotations)
+        results = map(self.findBestPositionForPiece, zip(allRotations, list(itertools.repeat(tetris, totalPiecesPossible))))
+        maxResult = max(results, key=itemgetter(0))
+        toPlaceAtColumnIndex = maxResult[1]
+        maxHeuristicPieceIndex = results.index(maxResult)
+        #print "Column Index FOund.", toPlaceAtColumnIndex
+        pieceCol = tetris.col
+        if(piece != allRotations[maxHeuristicPieceIndex]):
+            #print "In rotation Check"
+            pieceMaxLength = max(len(piece), len(piece[0]))
+            if(pieceCol + pieceMaxLength - 1 > 9):
+                for i in range(pieceCol + pieceMaxLength - 10):
+                    moves += 'b'
+                    pieceCol -= 1
+                    #tetris.left()
+            elif(pieceCol - pieceMaxLength - 1 < 0):
+                for i in range(pieceMaxLength - pieceCol - 1):
+                    moves += 'm'
+                    pieceCol += 1
+                    #tetris.right()
+            while(piece != allRotations[maxHeuristicPieceIndex]):
+                moves += 'n'
+                piece = TetrisGame.rotate_piece(piece, 90) #tetris.rotate()
+                #piece = tetris.get_piece()[0]
+
+        #print "After rotate"
+        while(toPlaceAtColumnIndex < pieceCol):
+            moves += 'b'
+            pieceCol -= 1
+            #tetris.left()
+        while(toPlaceAtColumnIndex > pieceCol):
+            moves += 'm' 
+            pieceCol += 1
+            #tetris.right()
+        #print moves, "\n\n"
+        #time.sleep(10)
+        return moves
        
     # This is the version that's used by the animted version. This is really similar to get_moves,
     # except that it runs as a separate thread and you should access various methods and data in
@@ -75,7 +116,7 @@ class ComputerPlayer:
     def control_game(self, tetris):
        
         #checkNewPiece = True 
-        pool = ThreadPool(4)
+        #pool = ThreadPool(4)
         while 1:
             time.sleep(0.1)
             
@@ -92,7 +133,7 @@ class ComputerPlayer:
             #func = partial(self.calculateScore, board)
             totalPiecesPossible = len(allRotations)
             #print "ZIP: ", zip(allRotations, list(itertools.repeat(tetris, totalPiecesPossible)))
-            results = pool.map(self.findBestPositionForPiece, zip(allRotations, list(itertools.repeat(tetris, totalPiecesPossible))))
+            results = map(self.findBestPositionForPiece, zip(allRotations, list(itertools.repeat(tetris, totalPiecesPossible))))
             #print results
             maxResult = max(results, key=itemgetter(0))
             
@@ -130,8 +171,8 @@ class ComputerPlayer:
             else:
                 tetris.down()
                 #checkPiece = True
-        pool.close()
-        pool.join()
+        #pool.close()
+        #pool.join()
 
     def findColumnIndexesWherePieceCanBePlaced(self, piece, board):
         maxRowIndexes = map(lambda x: 20 - x - len(piece), self.findColumnHeights(board))

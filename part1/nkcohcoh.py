@@ -81,7 +81,7 @@ def alphaBetaSearchIDS(board, n, k, timeout_duration):
   start = time.clock()
   while depth <= state_count:
     curr_start = time.clock()
-    print (depth)
+    #print (depth)
     score, new_board, node_count = alphaBetaMinimax(board, n, k, -sys.maxsize, sys.maxsize, depth, 0, order, 0)
     if game_status(new_board, n, k)[0] == True:
       return new_board #if game ended
@@ -91,9 +91,8 @@ def alphaBetaSearchIDS(board, n, k, timeout_duration):
     if time_left / time_used_at_depth < state_count - depth: #there are this many times more states to explore at depth+1
       if heuristic == "b": return new_board
       if heuristic == "a":
-        print (time_left, time_used_at_depth, time_left / time_used_at_depth, node_count)
         nodes_at_fringe = np.floor( time_left / time_used_at_depth * node_count - node_count )
-        print (depth + 1, "one more iteration with forward pruning", nodes_at_fringe)
+        #print (depth + 1, "one more iteration with forward pruning", nodes_at_fringe)
         if nodes_at_fringe > 0:
           score, new_board, node_count = alphaBetaMinimaxForwardPrune(board, n, k, -sys.maxsize, sys.maxsize, depth+1, 0, order, 0, nodes_at_fringe)
         return new_board
@@ -224,11 +223,17 @@ if "__main__" == __name__:
   board = np.reshape(list(board), (n, n))
   print ( "current board:")
   print (printable_board(board))
-  end, status = game_status(board, n, k)
-  result = ": white won." if status == sys.maxsize else ": black won." if status == -sys.maxsize else " with a draw."
-  if end is True: 
-    print ( "Game has ended" + result )
-    quit()
+  print("starting heuristic", heuristic, "gets white")
+  while True:
+    end, status = game_status(board, n, k)
+    result = ": white won." if status == sys.maxsize else ": black won." if status == -sys.maxsize else " with a draw."
+    if end is True: 
+      print ( "Game has ended" + result )
+      quit()
+    board = alphaBetaSearchIDS(board, n, k, time_lim)
+    print (printable_board( alphaBetaSearchIDS(board, n, k, time_lim) )) 
+    if heuristic == "a": heuristic = "b"
+    else: heuristic = "a"
   # let the algorithm pick a move!
   #print ( printable_board( alphaBetaSearchIDS(board, n, k, time_lim) ))  
-  print (printable_board_flat( alphaBetaSearchIDS(board, n, k, time_lim) ))  
+  #print (printable_board_flat( alphaBetaSearchIDS(board, n, k, time_lim) ))  

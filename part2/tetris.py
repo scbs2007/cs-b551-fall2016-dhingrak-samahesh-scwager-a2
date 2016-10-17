@@ -1,13 +1,38 @@
-# Simple tetris program! v0.2
+'''
+1. Description of Formulation:
+        1. State Space: This is the board with all possible placements of all the pieces.
+        2. The successor function: This gives us the board after placing a piece.
+        3. Edge weights: It is constant for each edge.
+        4. Heuristics: The heuristic value has been calculated in the following manner. All orientations of the current piece are taken; for each of these all 
+                    columns where this orientation can be placed are found; the orientation is placed at each of those columns; then all columns where all the 
+                    orientations of the next piece can be placed are found; i.e, all combinations of orientations of both the pieces are placed wherever possible on
+                    the board and then the heuristics described below are calculated and the position where the maximum value is found is the place where the 
+                    first piece is placed.
+                
+                The heuristics have been picked up from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+                a. Aggregate Height: This tells us how high a grid is. It is the sum of the height of each column. We need to reduce it.
+                b. Complete Lines: It is the number of complete lines in a grid. We need to maximize it.
+                c. Holes: This tells us the number of empty spaces - such that there is atleast one tile in the same column above it. We need to minimize it.
+                d. Bumpiness: This tells us the varitaions in column heights. It is computed by summing up the absolute differences between all two adjacent
+                              columns. We need to minimize it.
+                Total Heuristics = a * Aggregate Height + b * Complete Lines +  c * Number of Holes + d * Bumpiness.
+                a = -0.510066, b = 0.760666, c = -0.35663, d = -0.184483. these are the weights which the author of the blog found using Genetic Algorithm.
+        
+2. Problems faced: Finding the optimal weights for each heuristic measure was the most important factor for this approach. It was difficult to find and had to 
+                    be ultimately picked up from the blog post mentioned. 
+                    There are thread issues in the game: For example: I found problems in the given code - the game suddenly stops because of errors in 
+                    TetrisGame.py
+'''
+
+# Modified Simple tetris program! v0.2
 # D. Crandall, Sept 2016
 
 from AnimatedTetris import *
 from SimpleTetris import *
 from kbinput import *
-from multiprocessing.dummy import Pool as ThreadPool 
+#from multiprocessing.dummy import Pool as ThreadPool 
 from operator import itemgetter
-#from functools import partial
-import time, sys, itertools#, random
+import time, sys, itertools #, random 
 
 class HumanPlayer:
     def get_moves(self, tetris):
@@ -62,45 +87,34 @@ class ComputerPlayer:
         moves = ''
         board = tetris.get_board()
         piece = tetris.get_piece()[0]
-        pieceAsString = " ".join(piece)
         nextPiece = tetris.get_next_piece()
-        allRotations = self.allPossiblePieces[pieceAsString]
+        allRotations = self.allPossiblePieces[" ".join(piece)]
         totalPiecesPossible = len(allRotations)
         results = map(self.findBestPositionForPiece, zip(allRotations, list(itertools.repeat(tetris, totalPiecesPossible))))
         maxResult = max(results, key=itemgetter(0))
         toPlaceAtColumnIndex = maxResult[1]
         maxHeuristicPieceIndex = results.index(maxResult)
-        #print "Column Index FOund.", toPlaceAtColumnIndex
         pieceCol = tetris.col
         if(piece != allRotations[maxHeuristicPieceIndex]):
-            #print "In rotation Check"
             pieceMaxLength = max(len(piece), len(piece[0]))
             if(pieceCol + pieceMaxLength - 1 > 9):
                 for i in range(pieceCol + pieceMaxLength - 10):
                     moves += 'b'
                     pieceCol -= 1
-                    #tetris.left()
             elif(pieceCol - pieceMaxLength - 1 < 0):
                 for i in range(pieceMaxLength - pieceCol - 1):
                     moves += 'm'
                     pieceCol += 1
-                    #tetris.right()
             while(piece != allRotations[maxHeuristicPieceIndex]):
                 moves += 'n'
-                piece = TetrisGame.rotate_piece(piece, 90) #tetris.rotate()
-                #piece = tetris.get_piece()[0]
+                piece = TetrisGame.rotate_piece(piece, 90)
 
-        #print "After rotate"
         while(toPlaceAtColumnIndex < pieceCol):
             moves += 'b'
             pieceCol -= 1
-            #tetris.left()
         while(toPlaceAtColumnIndex > pieceCol):
             moves += 'm' 
             pieceCol += 1
-            #tetris.right()
-        #print moves, "\n\n"
-        #time.sleep(10)
         return moves
        
     # This is the version that's used by the animted version. This is really similar to get_moves,

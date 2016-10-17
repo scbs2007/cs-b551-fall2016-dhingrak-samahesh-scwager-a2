@@ -10,9 +10,9 @@
 For each programming problem, please include a detailed comments section at the top of your code 
 that describes: 
 
-Timing Note!! : the program accepts all time inputs within a given number of seconds, meaning 
-truncated to the given number of seconds. if given time = 3, the program accepts 3.5, 3.7, etc...
-If the ceiling of 3 is desired, the input should be 2.
+Timing Note!! : the program accepts all time inputs within a given number of seconds. 
+if given time = 3, the program accepts 2.5, 2.7, etc...
+If the ceiling of 4 is desired, the input should be 4.
 
 (1) a description of how you formulated the search problem, including precisely defining 
 the state space, the successor function, the edge weights, and any heuristics you designed; 
@@ -51,7 +51,6 @@ import time
 import signal
 
 losing_seq = []
-heuristic = ""
 
 def printable_board(board):
   return "\n".join([ " ".join(row) for row in board])
@@ -118,16 +117,13 @@ def alphaBetaSearchIDS(board, n, k, timeout_duration):
     score, new_board, node_count = alphaBetaMinimax(board, n, k, -sys.maxsize, sys.maxsize, depth, 0, order, 0)
     if game_status(new_board, n, k)[0] == True:
       return new_board #if game ended
-    time_used_at_depth = time.clock() - curr_start
+    time_used_at_depth = time.clock() - curr_start + 0.000000001 #avoid numerical errors
     time_elapsed = time.clock() - start
     time_left = timeout_duration - time_elapsed
     if time_left / time_used_at_depth < state_count - depth: #there are this many times more states to explore at depth+1
-      if heuristic == "b": return new_board
-      if heuristic == "a":
-        nodes_at_fringe = np.floor( 0.7* time_left / time_used_at_depth * node_count - node_count )
-        if nodes_at_fringe > 0:
-          score, new_board, node_count = alphaBetaMinimaxForwardPrune(board, n, k, -sys.maxsize, sys.maxsize, depth+1, 0, order, 0, nodes_at_fringe)
-          print ("time", time.clock() - start)
+      nodes_at_fringe = np.floor( time_left / time_used_at_depth * node_count - node_count )
+      if nodes_at_fringe > 0:
+        score, new_board, node_count = alphaBetaMinimaxForwardPrune(board, n, k, -sys.maxsize, sys.maxsize, depth+1, 0, order, 0, nodes_at_fringe)
         return new_board
     depth += 1
   return new_board
@@ -147,7 +143,7 @@ def alphaBetaMinimaxForwardPrune(board, n, k, alpha, beta, depth_limit, depth, o
   successors = successor(board, color)
   # keep only ordered successors if this depth has already been explored:
   if str(board) in order: 
-    successors = [ successors[i] for i in order[ str(board) ] ]
+    successors = [ successors[i] for i in order[ str(board) ][0] ]
     if len(successors) > 1: del successors[-1]
   best_move = np.array([])
   scores = []
@@ -165,7 +161,7 @@ def alphaBetaMinimaxForwardPrune(board, n, k, alpha, beta, depth_limit, depth, o
       if alpha >= beta:
         break
     # store moves in decreasing value order
-    if str(board) not in order: order[str(board)] = sorted(range(len(scores)), key=lambda k: scores[k], reverse = True)
+    if str(board) not in order: order[str(board)] = ( sorted(range(len(scores)), key=lambda k: scores[k], reverse = True), alpha)
     return alpha, best_move, node_count
   #if MIN's turn
   if color == 'b':
@@ -179,7 +175,7 @@ def alphaBetaMinimaxForwardPrune(board, n, k, alpha, beta, depth_limit, depth, o
       if alpha >= beta:
         break
     # store moves in increasing value order
-    if str(board) not in order: order[str(board)] = order[str(board)] = sorted(range(len(scores)), key=lambda k: scores[k])
+    if str(board) not in order: order[str(board)] = order[str(board)] = ( sorted(range(len(scores)), key=lambda k: scores[k]), beta)
     return beta, best_move, node_count
 
 
@@ -197,7 +193,7 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order, node_c
   temp = len(successors)
   # keep only ordered successors if this depth has already been explored:
   if str(board) in order: 
-    successors = [ successors[i] for i in order[ str(board) ] ]
+    successors = [ successors[i] for i in order[ str(board) ][0] ]
   best_move = np.array([])
   scores = []
   #if MAX's turn
@@ -214,7 +210,7 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order, node_c
       if alpha >= beta:
         break
     # store moves in decreasing value order
-    if str(board) not in order: order[str(board)] = sorted(range(len(scores)), key=lambda k: scores[k], reverse = True)
+    if str(board) not in order: order[str(board)] = ( sorted(range(len(scores)), key=lambda k: scores[k], reverse = True), alpha )
     return alpha, best_move, node_count
   #if MIN's turn
   if color == 'b':
@@ -228,45 +224,22 @@ def alphaBetaMinimax(board, n, k, alpha, beta, depth_limit, depth, order, node_c
       if alpha >= beta:
         break
     # store moves in increasing value order
-    if str(board) not in order: order[str(board)] = order[str(board)] = sorted(range(len(scores)), key=lambda k: scores[k])
+    if str(board) not in order: order[str(board)] = order[str(board)] = ( sorted(range(len(scores)), key=lambda k: scores[k]), beta )
     return beta, best_move, node_count
     
-# if "__main__" == __name__:
-#   n, k, board, time_lim, h = int(sys.argv[1]), int(sys.argv[2]), str(sys.argv[3]),  int(sys.argv[4]), str(sys.argv[5])
-#   # find all possible sequence positions in board
-#   losing_seq = sequences(n,k)
-#   heuristic = h
-#   board = np.reshape(list(board), (n, n))
-#   print ( "current board:")
-#   print (printable_board(board))
-#   end, status = game_status(board, n, k)
-#   result = ": white won." if status == sys.maxsize else ": black won." if status == -sys.maxsize else " with a draw."
-#   if end is True: 
-#     print ( "Game has ended" + result )
-#     quit()
-#   # let the algorithm pick a move!
-#   #print ( printable_board( alphaBetaSearchIDS(board, n, k, time_lim) ))  
-#   print (printable_board_flat( alphaBetaSearchIDS(board, n, k, time_lim) ))  
-  
 if "__main__" == __name__:
-  n, k, board, time_lim, h = int(sys.argv[1]), int(sys.argv[2]), str(sys.argv[3]),  int(sys.argv[4]), str(sys.argv[5])
+  n, k, board, time_lim = int(sys.argv[1]), int(sys.argv[2]), str(sys.argv[3]),  int(sys.argv[4])
   # find all possible sequence positions in board
   losing_seq = sequences(n,k)
-  heuristic = h
   board = np.reshape(list(board), (n, n))
+  time_lim -= 1
   print ( "current board:")
   print (printable_board(board))
-  print("starting heuristic", heuristic, "gets white")
-  while True:
-    end, status = game_status(board, n, k)
-    result = ": white won." if status == sys.maxsize else ": black won." if status == -sys.maxsize else " with a draw."
-    if end is True: 
-      print ( "Game has ended" + result )
-      quit()
-    board = alphaBetaSearchIDS(board, n, k, time_lim)
-    print (printable_board( board )) 
-    if heuristic == "a": heuristic = "b"
-    else: heuristic = "a"
+  end, status = game_status(board, n, k)
+  result = ": white won." if status == sys.maxsize else ": black won." if status == -sys.maxsize else " with a draw."
+  if end is True: 
+    print ( "Game has ended" + result )
+    quit()
   # let the algorithm pick a move!
-  #print ( printable_board( alphaBetaSearchIDS(board, n, k, time_lim) ))  
-  #print (printable_board_flat( alphaBetaSearchIDS(board, n, k, time_lim) ))  
+  print (printable_board_flat( alphaBetaSearchIDS(board, n, k, time_lim) ))  
+  

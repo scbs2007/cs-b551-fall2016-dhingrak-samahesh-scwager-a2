@@ -7,7 +7,41 @@
 #use of IDS to order branch exploration
 
 '''
-timeout function inspired by @ http://stackoverflow.com/questions/492519/timeout-on-a-function-call
+For each programming problem, please include a detailed comments section at the top of your code 
+that describes: 
+
+Timing Note!! : the program accepts all time inputs within a given number of seconds, meaning 
+truncated to the given number of seconds. if given time = 3, the program accepts 3.5, 3.7, etc...
+If the ceiling of 3 is desired, the input should be 2.
+
+(1) a description of how you formulated the search problem, including precisely defining 
+the state space, the successor function, the edge weights, and any heuristics you designed; 
+State space: all possible game states reachable from the input board 
+successor function: depending on whose turn it is, black or white stone added to current board at all open positions
+edge weights: constant
+heuristics: 
+terminal states: win: inf. loss: -inf. draw: 0.
+nonterminal states: for every possible sequence location:
+  for white: if a sequence has no black stones:
+                count +1 for the possibility of losing there. count the number of white stones, add +3**|w|
+  for black: do the same
+  subtract white from black for white for an overall score
+
+(2) a brief description of how your search algorithm works;
+Iterative deepening for alpha-beta pruning, with one final layer of beam search where the worst successor is removed.
+This beam search may not check the whole final layer unless time permits.
+
+(3) a discussion of any problems you faced, any assumptions, simplifications, and/or design 
+decisions you made;
+The fact that quitting recursive threads after a timeout occurs made it difficult to design alpha-beta.
+For this reason, we (a) counted the total number of moves at depth d (e.g., if there are 8 open spots and
+the depth is 2, there are 8*7 moves (b) computed the time for IDS to run at depth d and counted the 
+number of visited states (c) checked whether the remaining time was long enough for a full IDS at depth d+1.
+For example, here, we would need 6*computing_time_for_d to be able to compute for d+1. (d) ran a beam search
+at d+1 if the full search was not possible.
+
+(4) answers to any questions asked below in the assignment.
+No additional questions
 '''
 
 import sys
@@ -46,11 +80,11 @@ def game_heuristic(board, n, k, seq):
     blck_pos =  zip(*np.where(board == 'b'))
     for seq in losing_seq:
       vals = [ board[x,y] for [x,y] in seq ]
-      if vals.count('b') == 0:
+      if vals.count('b') == 0: #where w can lose
         w += 1 + sum( 3**i for i in range(vals.count('w')) )
-      if vals.count('w') == 0:
+      if vals.count('w') == 0: #where b can lose
         b += 1 + sum( 3**i for i in range(vals.count('b')) )
-    return w - b
+    return b - w
 
 
 # Check whether game has ended and whether there is a tie, a win, or a lose
@@ -81,7 +115,6 @@ def alphaBetaSearchIDS(board, n, k, timeout_duration):
   start = time.clock()
   while depth <= state_count:
     curr_start = time.clock()
-    #print (depth)
     score, new_board, node_count = alphaBetaMinimax(board, n, k, -sys.maxsize, sys.maxsize, depth, 0, order, 0)
     if game_status(new_board, n, k)[0] == True:
       return new_board #if game ended
@@ -91,10 +124,10 @@ def alphaBetaSearchIDS(board, n, k, timeout_duration):
     if time_left / time_used_at_depth < state_count - depth: #there are this many times more states to explore at depth+1
       if heuristic == "b": return new_board
       if heuristic == "a":
-        nodes_at_fringe = np.floor( time_left / time_used_at_depth * node_count - node_count )
-        #print (depth + 1, "one more iteration with forward pruning", nodes_at_fringe)
+        nodes_at_fringe = np.floor( 0.7* time_left / time_used_at_depth * node_count - node_count )
         if nodes_at_fringe > 0:
           score, new_board, node_count = alphaBetaMinimaxForwardPrune(board, n, k, -sys.maxsize, sys.maxsize, depth+1, 0, order, 0, nodes_at_fringe)
+          print ("time", time.clock() - start)
         return new_board
     depth += 1
   return new_board
@@ -231,7 +264,7 @@ if "__main__" == __name__:
       print ( "Game has ended" + result )
       quit()
     board = alphaBetaSearchIDS(board, n, k, time_lim)
-    print (printable_board( alphaBetaSearchIDS(board, n, k, time_lim) )) 
+    print (printable_board( board )) 
     if heuristic == "a": heuristic = "b"
     else: heuristic = "a"
   # let the algorithm pick a move!
